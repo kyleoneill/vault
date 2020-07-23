@@ -46,10 +46,12 @@ pub fn copy_dirs(origin: &PathBuf, destination: &PathBuf, overwrite: bool, ignor
                     if file_exists && file_hasnt_changed(&path, &new_destination) {
                         continue;
                     }
-                    let res = fs::copy(path, new_destination);
+                    let res = fs::copy(&path, new_destination);
                     match res {
                         Ok(copied) => bytes_copied += copied,
-                        Err(e) => eprintln!("Failed to copy file with error: {:?}", e)
+                        Err(e) => {
+                            eprintln!("Failed to copy file with path {} and error: {:?}", &path.display(), e);
+                        }
                     }
                 }
             }
