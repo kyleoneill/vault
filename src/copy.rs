@@ -1,7 +1,52 @@
 use std::path::PathBuf;
 use std::fs;
+use std::ops::AddAssign;
 
 use checksums;
+
+pub struct CopyInfo {
+    bytes_copied: u64,
+    files_copied: u64,
+    files_total: u64
+}
+
+impl CopyInfo {
+    pub fn new(bytes_copied: u64, files_copied: u64, files_total: u64) -> CopyInfo {
+        CopyInfo {
+            bytes_copied,
+            files_copied,
+            files_total
+        }
+    }
+    pub fn get_bytes_copied(&self) -> u64 {
+        self.bytes_copied
+    }
+    pub fn get_files_copied(&self) -> u64 {
+        self.files_copied
+    }
+    pub fn get_files_total(&self) -> u64 {
+        self.files_total
+    }
+    pub fn get_successful_transfers(&self) -> f64 {
+        if self.files_total > 0 {
+            let percent = (self.files_copied as f64 / self.files_total as f64) * 100 as f64;
+            percent.floor()
+        }
+        else {
+            0 as f64
+        }
+    }
+}
+
+impl AddAssign for CopyInfo {
+    fn add_assign(&mut self, other: Self) {
+        *self = Self {
+            bytes_copied: self.bytes_copied + other.bytes_copied,
+            files_copied: self.files_copied + other.files_copied,
+            files_total: self.files_total + other.files_total
+        }
+    }
+}
 
 fn file_hasnt_changed(file_1: &PathBuf, file_2: &PathBuf) -> bool{
     let checksum_one = checksums::hash_file(file_1, checksums::Algorithm::MD5);
@@ -12,8 +57,8 @@ fn file_hasnt_changed(file_1: &PathBuf, file_2: &PathBuf) -> bool{
     false
 }
 
-pub fn copy_dirs(origin: &PathBuf, destination: &PathBuf, overwrite: bool, ignore: &Vec<String>) -> u64 {
-    let mut bytes_copied: u64 = 0;
+pub fn copy_dirs(origin: &PathBuf, destination: &PathBuf, overwrite: bool, ignore: &Vec<String>) -> CopyInfo {
+    let mut copy_info = CopyInfo::new(0, 0, 0,);
     if origin.is_dir() {
         for entry in origin.read_dir().expect("reading dir failed") {
             if let Ok(entry) = entry {
@@ -27,7 +72,7 @@ pub fn copy_dirs(origin: &PathBuf, destination: &PathBuf, overwrite: bool, ignor
                     if !new_destination.exists() {
                         fs::create_dir(&new_destination).expect("Failed to create new directory during copy");
                     }
-                    bytes_copied += copy_dirs(&path, &new_destination, overwrite, ignore);
+                    copy_info += copy_dirs(&path, &new_destination, overwrite, ignore);
                 }
                 else if path.is_file() {
                     let file_exists = new_destination.exists();
@@ -46,9 +91,13 @@ pub fn copy_dirs(origin: &PathBuf, destination: &PathBuf, overwrite: bool, ignor
                     if file_exists && file_hasnt_changed(&path, &new_destination) {
                         continue;
                     }
+                    copy_info.files_total += 1;
                     let res = fs::copy(&path, new_destination);
                     match res {
-                        Ok(copied) => bytes_copied += copied,
+                        Ok(copied) => {
+                            copy_info.bytes_copied += copied;
+                            copy_info.files_copied += 1;
+                        },
                         Err(e) => {
                             eprintln!("Failed to copy file with path {} and error: {:?}", &path.display(), e);
                         }
@@ -57,7 +106,7 @@ pub fn copy_dirs(origin: &PathBuf, destination: &PathBuf, overwrite: bool, ignor
             }
         }
     }
-    bytes_copied
+    copy_info
 }
 
 /* This is something I found on stackoverflow after writing my own solution. Does it have useful info?
