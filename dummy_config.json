@@ -4,9 +4,11 @@
         "C:\\Users\\some_user\\Desktop\\vault\\testing\\origin_two"
     ],
     "destination": "C:\\Users\\some_user\\Desktop\\vault\\testing\\destination",
-    "ignore": [
-        "node_modules",
-        ".txt"
+    "ignore_extensions": [
+        "txt"
+    ],
+    "ignore_folders": [
+        "node_modules"
     ],
     "overwrite": false
 }
