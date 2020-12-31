@@ -13,6 +13,21 @@ fn main() {
 
     copy_info.backup(config);
 
-    println!("Copied {} bytes in {} seconds", copy_info.get_bytes_copied(), now.elapsed().as_secs());
+    let (bytes, byte_type) = match copy_info.get_bytes_copied() {
+        b if b > 1_000_000_000 => {
+            (b / 1_000_000_000, "GB")
+        }
+        b if b > 1_000_000 => {
+            (b / 1_000_000, "MB")
+        }
+        b if b > 1_000 => {
+            (b / 1_000, "KB")
+        }
+        b => {
+            (b, "B")
+        }
+    };
+
+    println!("Copied {} {} in {} seconds", bytes, byte_type, now.elapsed().as_secs());
     println!("Copied {} out of {} files: {}% successfully transferred", copy_info.get_files_copied(), copy_info.get_files_total(), copy_info.get_successful_transfers());
 }
